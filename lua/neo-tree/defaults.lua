@@ -1,4 +1,5 @@
 local config = {
+  -- SOURCES --
   -- If a user has a sources list it will replace this one.
   -- Only sources listed here will be loaded.
   -- You can also add an external source by adding it's name to this list.
@@ -7,21 +8,27 @@ local config = {
     "filesystem",
     "buffers",
     "git_status",
-    -- "document_symbols",
+    -- "document_symbols",    -- this is an experimental source that lists the LSP symbols in the buffer
   },
-  add_blank_line_at_top = false, -- Add a blank line at the top of the tree.
+  default_source = "filesystem",
+  
+  
+  -- MAPPINGS --
+  use_default_mappings = true,
+  close_floats_on_escape_key = true,
+  
+  
+  -- ENABLE/DISABLE FEATURES --
   auto_clean_after_session_restore = false, -- Automatically clean up broken neo-tree buffers saved in sessions
   close_if_last_window = false, -- Close Neo-tree if it is the last window left in the tab
-  -- popup_border_style is for input and confirmation dialogs.
-  -- Configurtaion of floating window is done in the individual source sections.
-  -- "NC" is a special style that works well with NormalNC set
-  close_floats_on_escape_key = true,
-  default_source = "filesystem",
   enable_diagnostics = true,
   enable_git_status = true,
   enable_modified_markers = true, -- Show markers for files with unsaved changes.
   enable_opened_markers = true,   -- Enable tracking of opened files. Required for `components.name.highlight_opened_files`
   enable_refresh_on_write = true, -- Refresh the tree when a file is written. Only used if `use_libuv_file_watcher` is false.
+  
+  
+  -- GIT STATUS --
   git_status_async = true,
   -- These options are for people with VERY large git repos
   git_status_async_options = {
@@ -30,22 +37,59 @@ local config = {
     max_lines = 10000, -- How many lines of git status results to process. Anything after this will be dropped.
                        -- Anything before this will be used. The last items to be processed are the untracked files.
   },
+  
+  
+  -- RENDERING --
+  add_blank_line_at_top = false, -- Add a blank line at the top of the tree.
   hide_root_node = false, -- Hide the root node.
-  retain_hidden_root_indent = false, -- IF the root node is hidden, keep the indentation anyhow. 
-                                     -- This is needed if you use expanders because they render in the indent.
+  
+  -- IF the root node is hidden, keep the indentation anyhow. 
+  -- This is needed if you use expanders because they render in the indent.
+  retain_hidden_root_indent = false, 
+  
+  -- popup_border_style is for input and confirmation dialogs.
+  -- Configurtaion of floating window is done in the individual source sections.
+  -- "NC" is a special style that works well with NormalNC set
+  popup_border_style = "NC", -- "double", "none", "rounded", "shadow", "single" or "solid"
+  use_popups_for_input = true, -- If false, inputs will use vim.ui.input() instead of custom floats.
+  
+  
+  -- LOGGING --
   log_level = "info", -- "trace", "debug", "info", "warn", "error", "fatal"
   log_to_file = false, -- true, false, "/path/to/file.log", use :NeoTreeLogs to show the file
+  
+  
+  -- OTHER BEHAVIORS --
   open_files_in_last_window = true, -- false = open files in top left window
   open_files_do_not_replace_types = { "terminal", "trouble", "qf" }, -- when opening files, do not use windows containing these filetypes or buftypes
-  popup_border_style = "NC", -- "double", "none", "rounded", "shadow", "single" or "solid"
-  resize_timer_interval = 500, -- in ms, needed for containers to redraw right aligned and faded content
-                               -- set to -1 to disable the resize timer entirely
-  --                           -- NOTE: this will speed up to 50 ms for 1 second following a resize
+  
+  -- in ms, needed for containers to redraw right aligned and faded content
+  -- set to -1 to disable the resize timer entirely
+  -- NOTE: this will speed up to 50 ms for 1 second following a resize
+  resize_timer_interval = 500, 
+  
+  nesting_rules = {},
   sort_case_insensitive = false, -- used when sorting files and directories in the tree
   sort_function = nil , -- uses a custom function for sorting files and directories in the tree
-  use_popups_for_input = true, -- If false, inputs will use vim.ui.input() instead of custom floats.
-  use_default_mappings = true,
-  -- source_selector provides clickable tabs to switch between sources.
+  
+  
+  -- GLOBAL CUSTOM COMMANDS that will be available in all sources (if not overridden in `opts[source_name].commands`)
+  --
+  -- You can then reference the custom command by adding a mapping to it:
+  --    globally    -> `opts.window.mappings`
+  --    locally     -> `opt[source_name].window.mappings` to make it source specific.
+  --
+  -- commands = {              |  window {                 |  filesystem {
+  --   hello = function()      |    mappings = {           |    commands = {
+  --     print("Hello world")  |      ["<C-c>"] = "hello"  |      hello = function()
+  --   end                     |    }                      |        print("Hello world in filesystem")
+  -- }                         |  }                        |      end
+  --
+  -- see `:h neo-tree-global-custom-commands`
+  commands = {}, -- A list of functions
+  
+  
+  -- SOURCE SELECTOR provides clickable tabs to switch between sources.
   source_selector = {
     winbar = false, -- toggle to show selector on winbar
     statusline = false, -- toggle to show selector on statusline
@@ -56,21 +100,28 @@ local config = {
       { source = "buffers" },
       { source = "git_status" },
     },
-    content_layout = "start", -- only with `tabs_layout` = "equal", "focus"
-    --                start  : |/ 裡 bufname     \/...
-    --                end    : |/     裡 bufname \/...
-    --                center : |/   裡 bufname   \/...
-    tabs_layout = "equal", -- start, end, center, equal, focus
-    --             start  : |/  a  \/  b  \/  c  \            |
-    --             end    : |            /  a  \/  b  \/  c  \|
-    --             center : |      /  a  \/  b  \/  c  \      |
-    --             equal  : |/    a    \/    b    \/    c    \|
-    --             active : |/  focused tab    \/  b  \/  c  \|
+    
+    -- only with `tabs_layout` = "equal", "focus"
+    --   start  : |/ 裡 bufname     \/...
+    --   end    : |/     裡 bufname \/...
+    --   center : |/   裡 bufname   \/...
+    content_layout = "start", 
+    
+    -- start, end, center, equal, focus
+    --   start  : |/  a  \/  b  \/  c  \            |
+    --   end    : |            /  a  \/  b  \/  c  \|
+    --   center : |      /  a  \/  b  \/  c  \      |
+    --   equal  : |/    a    \/    b    \/    c    \|
+    --   active : |/  focused tab    \/  b  \/  c  \|
+    tabs_layout = "equal", 
+    
     truncation_character = "…", -- character to use when truncating the tab label
     tabs_min_width = nil, -- nil | int: if int padding is added based on `content_layout`
     tabs_max_width = nil, -- this will truncate text even if `text_trunc_to_fit = false`
+    
     padding = 0, -- can be int or table
     -- padding = { left = 2, right = 0 },
+    
     -- separator = "▕", -- can be string or table, see below
      separator = { left = "▏", right= "▕" },
     -- separator = { left = "/", right = "\\", override = nil },     -- |/  a  \/  b  \/  c  \...
@@ -82,12 +133,17 @@ local config = {
     show_separator_on_edge = false,
     --                       true  : |/    a    \/    b    \/    c    \|
     --                       false : |     a    \/    b    \/    c     |
+    
     highlight_tab = "NeoTreeTabInactive",
     highlight_tab_active = "NeoTreeTabActive",
     highlight_background = "NeoTreeTabInactive",
     highlight_separator = "NeoTreeTabSeparatorInactive",
     highlight_separator_active = "NeoTreeTabSeparatorActive",
   },
+  
+  -----------------------------
+  --- CUSTOM EVENT HANDLERS ---
+  -----------------------------
   --
   --event_handlers = {
   --  {
@@ -162,11 +218,7 @@ local config = {
   -- }
   --},
   default_component_configs = {
-    container = {
-      enable_character_fade = true,
-      width = "100%",
-      right_padding = 0,
-    },
+    container = { enable_character_fade = true, width = "100%", right_padding = 0 },
     --diagnostics = {
     --  symbols = {
     --    hint = "H",
@@ -205,10 +257,7 @@ local config = {
       default = "*",
       highlight = "NeoTreeFileIcon"
     },
-    modified = {
-      symbol = "[+] ",
-      highlight = "NeoTreeModified",
-    },
+    modified = { symbol = "[+] ", highlight = "NeoTreeModified" },
     name = {
       trailing_slash = false,
       highlight_opened_files = false, -- Requires `enable_opened_markers = true`. 
@@ -237,18 +286,12 @@ local config = {
   },
   renderers = {
     directory = {
-      { "indent" },
-      { "icon" },
-      { "current_filter" },
+      { "indent" }, { "icon" }, { "current_filter" },
       {
         "container",
         content = {
           { "name", zindex = 10 },
-          -- {
-          --   "symlink_target",
-          --   zindex = 10,
-          --   highlight = "NeoTreeSymbolicLinkTarget",
-          -- },
+          -- { "symlink_target", zindex = 10, highlight = "NeoTreeSymbolicLinkTarget" },
           { "clipboard", zindex = 10 },
           { "diagnostics", errors_only = true, zindex = 20, align = "right", hide_when_expanded = true },
           { "git_status", zindex = 20, align = "right", hide_when_expanded = true },
@@ -261,15 +304,8 @@ local config = {
       {
         "container",
         content = {
-          {
-            "name",
-            zindex = 10
-          },
-          -- {
-          --   "symlink_target",
-          --   zindex = 10,
-          --   highlight = "NeoTreeSymbolicLinkTarget",
-          -- },
+          { "name", zindex = 10 },
+          -- { "symlink_target", zindex = 10, highlight = "NeoTreeSymbolicLinkTarget" },
           { "clipboard", zindex = 10 },
           { "bufnr", zindex = 10 },
           { "modified", zindex = 20, align = "right" },
@@ -282,28 +318,8 @@ local config = {
       { "indent", with_markers = false },
       { "name", highlight = "NeoTreeMessage" },
     },
-    terminal = {
-      { "indent" },
-      { "icon" },
-      { "name" },
-      { "bufnr" }
-    }
+    terminal = { { "indent" }, { "icon" }, { "name" }, { "bufnr" } },
   },
-  nesting_rules = {},
-  -- Global custom commands that will be available in all sources (if not overridden in `opts[source_name].commands`)
-  --
-  -- You can then reference the custom command by adding a mapping to it:
-  --    globally    -> `opts.window.mappings`
-  --    locally     -> `opt[source_name].window.mappings` to make it source specific.
-  --
-  -- commands = {              |  window {                 |  filesystem {
-  --   hello = function()      |    mappings = {           |    commands = {
-  --     print("Hello world")  |      ["<C-c>"] = "hello"  |      hello = function()
-  --   end                     |    }                      |        print("Hello world in filesystem")
-  -- }                         |  }                        |      end
-  --
-  -- see `:h neo-tree-global-custom-commands`
-  commands = {}, -- A list of functions
 
   window = { -- see https://github.com/MunifTanjim/nui.nvim/tree/main/lua/nui/popup for
              -- possible options. These can also be functions that return these options.
@@ -312,10 +328,7 @@ local config = {
     height = 15, -- applies to top and bottom positions
     auto_expand_width = false, -- expand the window when file exceeds the window width. does not work with position = "float"
     popup = { -- settings that apply to float position only
-      size = {
-        height = "80%",
-        width = "50%",
-      },
+      size = { height = "80%", width = "50%" },
       position = "50%", -- 50% means center it
       -- you can also specify border here, if you want a different setting from
       -- the global popup_border_style.
@@ -326,10 +339,12 @@ local config = {
                         -- "sibling": Insert nodes  as siblings of the directory under cursor.
     -- Mappings for tree window. See `:h neo-tree-mappings` for a list of built-in commands.
     -- You can also create your own commands by providing a function instead of a string.
-    mapping_options = {
-      noremap = true,
-      nowait = true,
-    },
+    
+    
+    -----------------------
+    --- GLOBAL MAPPINGS ---
+    -----------------------
+    mapping_options = { noremap = true, nowait = true },
     mappings = {
       ["<space>"] = {
           "toggle_node",
@@ -374,6 +389,10 @@ local config = {
       [">"] = "next_source",
     },
   },
+  
+  --------------------------
+  --- FILE SYSTEM SOURCE ---
+  --------------------------
   filesystem = {
     window = {
       mappings = {
@@ -485,6 +504,11 @@ local config = {
     use_libuv_file_watcher = false, -- This will use the OS level file watchers to detect changes
                                     -- instead of relying on nvim autocmd events.
   },
+  
+  
+  ---------------------
+  --- BUFFER SOURCE ---
+  ---------------------
   buffers = {
     bind_to_cwd = true,
     follow_current_file = true, -- This will find and focus the file in the active buffer every time
@@ -500,6 +524,12 @@ local config = {
       },
     },
   },
+  
+  
+  
+  -------------------------
+  --- GIT STATUS SOURCE ---
+  -------------------------
   git_status = {
     window = {
       mappings = {
@@ -513,23 +543,22 @@ local config = {
       },
     },
   },
+  
+  
+  
+  -------------------------------
+  --- DOCUMENT SYMBOLS SOURCE ---
+  -------------------------------
   document_symbols = {
     follow_cursor = false,
     client_filters = "first",
     renderers = {
-      root = {
-        {"indent"},
-        {"icon", default="C" },
-        {"name", zindex = 10},
-      },
+      root = { {"indent"}, {"icon", default="C" }, {"name", zindex = 10} },
       symbol = {
         {"indent", with_expanders = true},
         {"kind_icon", default="?" },
         {"container",
-        content = {
-          {"name", zindex = 10},
-          {"kind_name", zindex = 20, align = "right"},
-          }
+          content = { {"name", zindex = 10}, {"kind_name", zindex = 20, align = "right"} }
         }
       },
     },
@@ -592,6 +621,13 @@ local config = {
       -- Macro = { icon = ' ', hl = 'Macro' },
     }
   },
+    
+    
+    
+    
+  -----------------------------
+  --- EXAMPLE CUSTOM SOURCE ---
+  -----------------------------
   example = {
     renderers = {
       custom = {
